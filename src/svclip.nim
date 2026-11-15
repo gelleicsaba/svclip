@@ -1,7 +1,7 @@
 # This is just an example to get you started. A typical binary package
 # uses this file as the main entry point of the application.
 
-import nimclipboard/libclipboard
+import libclip/clipboard
 import os
 import osproc
 import streams
@@ -14,14 +14,6 @@ when isMainModule:
 
     let paramCount = paramCount()
 
-    proc getClipText(): string =
-      let cb = clipboard_new(nil)
-      defer: clipboard_free(cb)
-      let raw = cb.clipboard_text()
-      if raw.isNil:
-        return ""        # clipboard empty or not text
-      result = $raw
-
     proc checkDir(): string =
       let dir = getHomeDir() / ".svclip"
       if not dirExists(dir):
@@ -31,7 +23,7 @@ when isMainModule:
     proc save(name: string) =
       let dir = checkDir()
       let db = open(dir / "clips.db", "", "", "")
-      let clipText = getClipText();
+      let clipText = getClipboardText();
 
       db.exec(sql"""
         CREATE TABLE IF NOT EXISTS clips (
@@ -52,16 +44,6 @@ when isMainModule:
 
       echo "Saved."
       return
-
-    proc setClip(text: string) =
-      let (cmd, args) =
-        if getEnv("WAYLAND_DISPLAY") != "": ("wl-copy", @[])
-        else: ("xclip", @["-selection", "clipboard"])
-      let p = startProcess(cmd, args = args, options = {poUsePath})
-      p.inputStream.write(text)
-      p.inputStream.close()
-      discard p.waitForExit()
-      p.close()
 
     proc load(name: string) =
       let dir = checkDir()
@@ -98,10 +80,7 @@ when isMainModule:
           echo "Text: " & first[1][0 .. 14] & "..."
         else:
           echo "Text: " & first[1]
-        # let cb = clipboard_new(nil)
-        # defer: clipboard_free(cb)
-        # discard cb.clipboard_set_text(cstring(first[1]))
-        setClip(first[1])
+        discard setClipboardText(first[1])
         let path = getHomeDir() / ".svclip" / "latest"
         writeFile(path, first[2])
       return
@@ -127,10 +106,7 @@ when isMainModule:
           echo "Text: " & first[1][0 .. 14] & "..."
         else:
           echo "Text: " & first[1]
-        # let cb = clipboard_new(nil)
-        # defer: clipboard_free(cb)
-        # discard cb.clipboard_set_text(cstring(first[1]))
-        setClip(first[1])
+        discard setClipboardText(first[1])
         let path = getHomeDir() / ".svclip" / "latest"
         writeFile(path, first[2])
       else:
@@ -202,19 +178,7 @@ when isMainModule:
       return latest
 
     proc version(): string =
-      const s = staticRead("svclip.nimble")
-      for line in s.splitLines:
-        let l = line.strip
-        if l.startsWith("version"):
-          return l.split('"')[1]
-      "unknown"
-
-    proc findClipTool(): bool =
-      if getEnv("WAYLAND_DISPLAY") != "" and findExe("wl-copy") != "":
-        return true
-      if findExe("xclip") != "":
-        return true
-      return false
+      return "1.0.0"
 
     proc info() =
       echo "svclip ", version()
@@ -239,26 +203,6 @@ when isMainModule:
       echo "    svclip ra                            - Remove all key"
       echo "  Help:"
       echo "    svclip                               - Show this message"
-
-    if not findClipTool():
-      echo "No clipboard tool found. Install xclip (X11) or wl-clipboard (Wayland)."
-      echo "Suggestion:"
-      echo ""
-      echo "Debian, Ubuntu, Linux Mint, Pop!_OS"
-      echo "  sudo apt install xclip"
-      echo ""
-      echo "Fedora, RHEL, Rocky, Alma"
-      echo "  sudo dnf install xclip"
-      echo ""
-      echo "Arch, Manjaro, EndeavourOS"
-      echo "  sudo pacman -S xclip"
-      echo ""
-      echo "openSUSE"
-      echo "  sudo zypper install xclip"
-      echo ""
-      echo "Alpine"
-      echo "  sudo apk add xclip"
-      quit()
 
     if paramCount == 2:
       if paramStr(1) == "s":

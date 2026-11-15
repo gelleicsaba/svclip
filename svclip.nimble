@@ -11,5 +11,5 @@ bin           = @["svclip"]
 # Dependencies
 
 requires "nim >= 2.2.10"
-requires "nimclipboard"
 requires "db_connector"
+requires "libclip"
