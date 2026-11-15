@@ -166,6 +166,18 @@ when isMainModule:
         removeFile(dir / "latest")
         echo "Key removed."
 
+    proc removeById(id: int) =
+      let dir = checkDir()
+      let db = open(dir / "clips.db", "", "", "")
+
+      let all = db.getAllRows(sql"SELECT id, text, name, created FROM clips WHERE id = ? LIMIT 1", id)
+      if all.len == 0:
+        echo "There is no entry to delete. There is no such an Id."
+      else:
+        db.exec(sql"DELETE FROM clips WHERE id = ?", id)
+        removeFile(dir / "latest")
+        echo "Entry removed."
+
     proc resetAll() =
       echo "Are you sure to remove all keys (y/n)? "
       let ok = readLine(stdin)
@@ -222,7 +234,8 @@ when isMainModule:
       echo "    svclip la                            - List all keys"
       echo "    svclip ll                            - Show latest key"
       echo "  Remove:"
-      echo "    svclip r [key]                       - Remove the key"
+      echo "    svclip r [key]                       - Remove the entry by key name"
+      echo "    svclip ri [id]                       - Remove the entry by id"
       echo "    svclip ra                            - Remove all key"
       echo "  Help:"
       echo "    svclip                               - Show this message"
@@ -254,6 +267,15 @@ when isMainModule:
       elif paramStr(1) == "r":
         remove(paramStr(2))
         quit()
+      elif paramStr(1) == "ri":
+        let idString = paramStr(2)
+        var id: int
+        try:
+          id = parseInt(idString)
+        except ValueError:
+          echo "Not a valid Id"
+        removeById(id)
+        quit()
       elif paramStr(1) == "id":
         let idString = paramStr(2)
         var id: int
@@ -268,7 +290,10 @@ when isMainModule:
 
       if paramStr(1) == "ll":
         let latest = getLatest()
-        echo latest
+        if latest != "":
+          echo latest
+        else:
+          echo "There is no latest key."
         quit()
       elif paramStr(1) == "la":
         listAll()
